@@ -9,6 +9,7 @@ from pydantic import HttpUrl
 from bs4 import BeautifulSoup
 
 from .lib.transform import BlockTransform
+from mangum import Mangum
 
 app = FastAPI(title="Article Import API", version="0.1.0")
 
@@ -37,3 +38,6 @@ def process_url(url: HttpUrl, doc_type: Literal['blocks', 'markdown'] = 'blocks'
     elif doc_type == "markdown":
         data["markdown"] = md(article.article_html, newline_styles='backslash')
     return data
+
+
+handler = Mangum(app, lifespan="off")
