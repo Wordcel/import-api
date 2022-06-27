@@ -19,6 +19,8 @@ ENV \
     POETRY_VIRTUALENVS_IN_PROJECT=true \
     POETRY_NO_INTERACTION=1
 
+RUN apt-get update -y && apt-get install -y gcc
+
 # Install Poetry - respects $POETRY_VERSION & $POETRY_HOME
 RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py | python
 ENV PATH="$POETRY_HOME/bin:$PATH"
@@ -66,25 +68,3 @@ ENV PORT=5000
 ENV APP_NAME=$APP_NAME
 
 ENTRYPOINT uvicorn $APP_NAME.main:app --host ${HOST} --port ${PORT}
-
-FROM public.ecr.aws/lambda/python:$PYTHON_VERSION as lambda
-ARG APP_NAME
-ARG APP_PATH
-
-ENV \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PYTHONFAULTHANDLER=1
-
-ENV \
-    PIP_NO_CACHE_DIR=off \
-    PIP_DISABLE_PIP_VERSION_CHECK=on \
-    PIP_DEFAULT_TIMEOUT=100
-
-# Get build artifact wheel and install it respecting dependency versions
-WORKDIR $APP_PATH
-COPY --from=build $APP_PATH/dist/*.whl ./
-COPY --from=build $APP_PATH/constraints.txt ./
-RUN pip install ./$APP_NAME*.whl --constraint constraints.txt
-
-CMD ["app.app.handler"]
