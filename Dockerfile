@@ -1,6 +1,6 @@
 ARG APP_NAME=import_api
 ARG APP_PATH=/opt/$APP_NAME
-ARG PYTHON_VERSION=3.9-slim
+ARG PYTHON_VERSION=3.9
 ARG POETRY_VERSION=1.1.13
 
 # Stage: staging
@@ -43,7 +43,7 @@ RUN poetry export --format requirements.txt --output constraints.txt --without-h
 #
 # Stage: production
 #
-FROM python:$PYTHON_VERSION as production
+FROM python:$PYTHON_VERSION-slim as production
 ARG APP_PATH
 ARG APP_NAME
 
