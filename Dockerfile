@@ -4,7 +4,7 @@ ARG PYTHON_VERSION=3.9
 ARG POETRY_VERSION=1.1.13
 
 # Stage: staging
-FROM python:$PYTHON_VERSION as staging
+FROM --platform=linux/amd64 python:$PYTHON_VERSION as staging
 ARG APP_NAME
 ARG APP_PATH
 ARG POETRY_VERSION
@@ -43,7 +43,7 @@ RUN poetry export --format requirements.txt --output constraints.txt --without-h
 #
 # Stage: production
 #
-FROM python:$PYTHON_VERSION-slim as production
+FROM --platform=linux/amd64 python:$PYTHON_VERSION-slim as production
 ARG APP_PATH
 ARG APP_NAME
 
@@ -55,5 +55,6 @@ RUN pip install ./$APP_NAME*.whl --constraint constraints.txt
 
 ENV HOST="0.0.0.0"
 ENV PORT=5000
+ENV APP_NAME=$APP_NAME
 
-ENTRYPOINT uvicorn $APP_NAME.main:app --host ${HOST} --port ${PORT}
+ENTRYPOINT uvicorn ${APP_NAME}.main:app --host ${HOST} --port ${PORT}
