@@ -54,7 +54,7 @@ COPY --from=build $APP_PATH/constraints.txt ./
 RUN pip install ./$APP_NAME*.whl --constraint constraints.txt
 
 ENV HOST="0.0.0.0"
-ENV PORT=5000
+ENV PORT=80
 ENV APP_NAME=$APP_NAME
 
 ENTRYPOINT uvicorn ${APP_NAME}.main:app --host ${HOST} --port ${PORT}

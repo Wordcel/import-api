@@ -1,3 +1,0 @@
-name: import-api
-runtime: nodejs
-description: API Service to import blogposts by their urls
