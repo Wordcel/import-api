@@ -22,10 +22,10 @@ def guess_sitemap(blog: HttpUrl):
     blog_parsed = tldextract.extract(blog)
     guessed_sitemap = f"{blog}/sitemap.xml"
 
-    if blog_parsed.domain == "medium" and blog_parsed.subdomain is not None:
+    if blog_parsed.domain == "medium":
         guessed_sitemap = f"{blog}/sitemap/sitemap.xml"
-    else:
-        guessed_sitemap = f"{blog}/feed"
+        if blog_parsed.subdomain is None:
+            guessed_sitemap = f"{blog}/feed"
     return guessed_sitemap
 
 
@@ -68,6 +68,7 @@ async def discover_urls(blog: HttpUrl, sitemap: Optional[SitemapUrl] = None):
         data = response.text
         soup = BeautifulSoup(data)
         urls = [url.loc.text for url in soup.find_all("url")]
+        print(urls)
         if not len(urls):
             raise HTTPException(detail="Given sitemap didn't return any urls."
                                 " Please check the sitemap again",
