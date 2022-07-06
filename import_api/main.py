@@ -4,7 +4,6 @@ from markdownify import markdownify as md
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import JSONResponse
 
 from typing import Literal, Optional
 from bs4 import BeautifulSoup
@@ -56,7 +55,7 @@ async def process_url(url: HttpUrl, doc_type: Literal['blocks', 'markdown'] = 'b
         data["blocks"] = transformer.convert_prime(blocks=[])
     elif doc_type == "markdown":
         data["markdown"] = md(article.article_html, newline_styles='backslash')
-    return JSONResponse(data)
+    return data
 
 
 @ app.get("/import/discover")
@@ -73,10 +72,9 @@ async def discover_urls(blog: HttpUrl, sitemap: Optional[SitemapUrl] = None):
             raise HTTPException(detail="Given sitemap didn't return any urls."
                                 " Please check the sitemap again",
                                 status_code=404)
-        to_return = {
+        return {
             "urls": urls
         }
-        return JSONResponse(content=to_return)
     else:
         guessed_sitemap = guess_sitemap(blog)
         urls_response = await discover_urls(blog, guessed_sitemap)
