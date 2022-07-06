@@ -1,3 +1,6 @@
+import logging
+
+
 class BlockTransform(object):
 
     def __init__(self, html):
@@ -44,7 +47,7 @@ class BlockTransform(object):
             if not name:
                 continue
             if name in ['html', 'body', 'div', 'a']:
-                blocks += self.convert_prime(blocks, i)
+                self.convert_prime(blocks, i)
             elif name == 'p':
                 block = self.paragraph(i)
                 blocks.append(block)
@@ -69,6 +72,6 @@ class BlockTransform(object):
                 block = {"type": "image", "data": content}
                 blocks.append(block)
             else:
-                print(name)
-                print(i)
+                logging.error(f"Missed: {name}")
+                logging.error(i)
         return blocks
