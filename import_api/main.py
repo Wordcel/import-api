@@ -1,34 +1,54 @@
 from newspaper import Article, Source
 from markdownify import markdownify as md
 
-from typing import Union
+from typing import Optional
 
-from fastapi import FastAPI
-from typing import Literal
-from pydantic import HttpUrl
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
+
+from typing import Literal, Optional
 from bs4 import BeautifulSoup
+import requests
+import tldextract
+import json
 
 from .lib.transform import BlockTransform
+from .lib.types import SitemapUrl, HttpUrl
 
 app = FastAPI(title="Article Import API", version="0.1.0")
 
 
-@app.get("/")
+def guess_sitemap(blog: HttpUrl):
+    blog_parsed = tldextract.extract(blog)
+    guessed_sitemap = f"{blog}/sitemap.xml"
+
+    if blog_parsed.domain == "medium" and blog_parsed.subdomain is not None:
+        guessed_sitemap = f"{blog}/sitemap/sitemap.xml"
+    else:
+        guessed_sitemap = f"{blog}/feed"
+    return guessed_sitemap
+
+
+@ app.get("/")
 async def index():
     return {"msg": "gm"}
 
 
-@app.get("/import")
-def process_url(url: HttpUrl, doc_type: Literal['blocks', 'markdown'] = 'blocks'):
+@ app.get("/import")
+async def process_url(url: HttpUrl, doc_type: Literal['blocks', 'markdown'] = 'blocks'):
     article = Article(url, keep_article_html=True)
     article.download()
     article.parse()
+
+    # TODO: Author and Publish Date works only for certain sources
     data = {
         "title": article.title,
         "authors": article.authors,
         "header_image": article.top_image,
         "images": article.images,
         "videos": article.movies,
+        "original_url": url,
+        "published_date": article.publish_date
     }
     if doc_type == "blocks":
         html_doc = BeautifulSoup(article.article_html)
@@ -36,4 +56,31 @@ def process_url(url: HttpUrl, doc_type: Literal['blocks', 'markdown'] = 'blocks'
         data["blocks"] = transformer.convert_prime(blocks=[])
     elif doc_type == "markdown":
         data["markdown"] = md(article.article_html, newline_styles='backslash')
-    return data
+    return JSONResponse(data)
+
+
+@ app.get("/import/discover")
+async def discover_urls(blog: HttpUrl, sitemap: Optional[SitemapUrl] = None):
+    # TODO: Support substack, medium at the least
+
+    if sitemap:
+        response = requests.get(sitemap)
+        data = response.text
+        soup = BeautifulSoup(data)
+        urls = [url.loc.text for url in soup.find_all("url")]
+        if not len(urls):
+            raise HTTPException(detail="Given sitemap didn't return any urls."
+                                " Please check the sitemap again",
+                                status_code=404)
+        to_return = {
+            "urls": urls
+        }
+        return JSONResponse(content=to_return)
+    else:
+        guessed_sitemap = guess_sitemap(blog)
+        urls_response = await discover_urls(blog, guessed_sitemap)
+        if urls_response.status_code > 400:
+            raise HTTPException(detail="Unable to guess a sitemap."
+                                " Please consider using the sitemap directly",
+                                status_code=404)
+        return urls_response
