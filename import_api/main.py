@@ -10,6 +10,7 @@ from bs4 import BeautifulSoup
 import requests
 import tldextract
 import json
+from readabilipy import simple_json_from_html_string
 
 from .lib.transform import BlockTransform
 from .lib.types import SitemapUrl, HttpUrl
@@ -35,9 +36,12 @@ async def index():
 
 @ app.get("/import")
 async def process_url(url: HttpUrl, doc_type: Literal['blocks', 'markdown'] = 'blocks'):
-    article = Article(url, keep_article_html=True)
+    article = Article(url)
     article.download()
     article.parse()
+
+    article_json = simple_json_from_html_string(
+        article.html, use_readability=True)
 
     # TODO: Author and Publish Date works only for certain sources
     data = {
@@ -49,18 +53,19 @@ async def process_url(url: HttpUrl, doc_type: Literal['blocks', 'markdown'] = 'b
         "original_url": url,
         "published_date": article.publish_date
     }
+    article_html = article_json["content"]
+    print(article_html)
     if doc_type == "blocks":
-        html_doc = BeautifulSoup(article.article_html)
+        html_doc = BeautifulSoup(article_html)
         transformer = BlockTransform(html_doc)
         data["blocks"] = transformer.convert_prime(blocks=[])
     elif doc_type == "markdown":
-        data["markdown"] = md(article.article_html, newline_styles='backslash')
+        data["markdown"] = md(article_html, newline_styles='backslash')
     return data
 
 
 @ app.get("/import/discover")
 async def discover_urls(blog: HttpUrl, sitemap: Optional[SitemapUrl] = None):
-    # TODO: Support substack, medium at the least
 
     if sitemap:
         response = requests.get(sitemap)

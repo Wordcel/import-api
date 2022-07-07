@@ -23,6 +23,36 @@ class BlockTransform(object):
         content = "".join([str(c) for c in node.contents])
         return {"type": "paragraph", "data": {"text": content}}
 
+    def image(self, node):
+        if node.name == "img":
+            content = {"url": node.attrs["src"],
+                       "caption": node.attrs["alt"]}
+        elif node.name == "figure":
+            img = node.find("a")
+            img_url = ""
+            if img:
+                img_url = img.attrs.get("href", "")
+                # REFACTORME: This is yuck
+                if "twitter.com" in img_url or "t.co" in img_url:
+                    return self.embed_tweet(node)
+            caption = node.find("figcaption")
+            if caption:
+                caption = " ".join(caption.contents)
+            content = {"type": "image",
+                       "data": {"url": img_url, "content": caption}}
+        return {"type": "image", "data": content}
+
+    def embed(self, node):
+        url = node.attrs["src"]
+        content = {"service": "youtube",
+                   "source": url,
+                   "embed": url,
+                   "width": 600,
+                   "height": 300,
+                   "caption": ""
+                   }
+        return {"type": "embed", "data": content}
+
     def header(self, node, level):
         return {"type": "header", "data": {
             "level": level, "text": node.text}}
@@ -46,10 +76,15 @@ class BlockTransform(object):
             name = i.name
             if not name:
                 continue
-            if name in ['html', 'body', 'div', 'a']:
+            if name in ['html', 'body', 'div', 'a', 'article', 'section']:
                 self.convert_prime(blocks, i)
             elif name == 'p':
-                block = self.paragraph(i)
+                if img := i.find("img"):
+                    block = self.image(img)
+                elif iframe := i.find("iframe"):
+                    block = self.embed(iframe)
+                else:
+                    block = self.paragraph(i)
                 blocks.append(block)
             elif len(name) == 2 and name.startswith("h"):
                 level = name[-1]
@@ -66,10 +101,11 @@ class BlockTransform(object):
                     block = {"type": "blockquote",
                              "data": {"text": str(content)}}
                 blocks.append(block)
-            elif name == "img":
-                content = {"url": i.attrs["src"],
-                           "caption": i.attrs["alt"]}
-                block = {"type": "image", "data": content}
+            elif name in ["img", "figure"]:
+                block = self.image(i)
+                blocks.append(block)
+            elif name == "iframe":
+                block = self.embed(i)
                 blocks.append(block)
             else:
                 logging.error(f"Missed: {name}")
