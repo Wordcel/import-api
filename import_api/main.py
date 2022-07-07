@@ -54,7 +54,6 @@ async def process_url(url: HttpUrl, doc_type: Literal['blocks', 'markdown'] = 'b
         "published_date": article.publish_date
     }
     article_html = article_json["content"]
-    print(article_html)
     if doc_type == "blocks":
         html_doc = BeautifulSoup(article_html)
         transformer = BlockTransform(html_doc)
