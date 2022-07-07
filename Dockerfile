@@ -53,6 +53,11 @@ COPY --from=build $APP_PATH/dist/*.whl ./
 COPY --from=build $APP_PATH/constraints.txt ./
 RUN pip install ./$APP_NAME*.whl --constraint constraints.txt
 
+RUN apt-get update -yq \
+    && apt-get install curl gnupg -yq \
+    && curl -sL https://deb.nodesource.com/setup_lts.x | bash \
+    && apt-get install nodejs -yq
+
 ENV HOST="0.0.0.0"
 ENV PORT=80
 ENV APP_NAME=$APP_NAME
