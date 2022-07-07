@@ -67,7 +67,6 @@ async def discover_urls(blog: HttpUrl, sitemap: Optional[SitemapUrl] = None):
         data = response.text
         soup = BeautifulSoup(data)
         urls = [url.loc.text for url in soup.find_all("url")]
-        print(urls)
         if not len(urls):
             raise HTTPException(detail="Given sitemap didn't return any urls."
                                 " Please check the sitemap again",
@@ -77,9 +76,4 @@ async def discover_urls(blog: HttpUrl, sitemap: Optional[SitemapUrl] = None):
         }
     else:
         guessed_sitemap = guess_sitemap(blog)
-        urls_response = await discover_urls(blog, guessed_sitemap)
-        if urls_response.status_code > 400:
-            raise HTTPException(detail="Unable to guess a sitemap."
-                                " Please consider using the sitemap directly",
-                                status_code=404)
-        return urls_response
+        return await discover_urls(blog, guessed_sitemap)
